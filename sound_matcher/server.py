@@ -30,7 +30,6 @@ import json
 import traceback
 import time
 
-# import your existing ML module (the large script you pasted)
 import sound_matcher as sm
 
 app = Flask(__name__)
@@ -42,11 +41,11 @@ AUDIO_DIR = Path(sm.AUDIO_DIR)            # sound_profiles/audio/
 INDEX_DIR = Path(sm.INDEX_DIR)            # sound_profiles/indices/
 MODEL_DIR = Path(sm.MODEL_DIR)            # sound_profiles/models/
 
-# status text file (website & LED read this)
+# status text file 
 STATUS_FILE = Path("/home/pi/status.txt") if Path("/home/pi").exists() else Path("status.txt")
 
 # Allowed audio extensions
-ALLOWED_AUDIO_EXTS = {".wav", ".flac", ".mp3", ".ogg", ".m4a"}
+ALLOWED_AUDIO_EXTS = {".wav"}
 
 # Ensure folders exist
 BASE_DIR.mkdir(parents=True, exist_ok=True)
@@ -214,7 +213,7 @@ def get_status():
         if STATUS_FILE.exists():
             content = STATUS_FILE.read_text().strip()
         else:
-            content = "NO_STATUS"  # or "OK"
+            content = "NO_STATUS" 
         return jsonify({"status": content}), 200
     except Exception as e:
         return jsonify({"error": str(e)}), 500
@@ -257,58 +256,68 @@ def list_labels():
 def delete_group():
     """
     Delete a specific group/label for a user:
-      POST JSON: {"user": "alice", "label": "greeting"}
+      POST form-data: 'user' (string), 'group_name' (string)
     This:
       - removes files under AUDIO_DIR/<user>/<label>/
       - removes examples from the index for that label
-      - optionally retrains the model
+      - retrains the model (best-effort)
     """
     try:
-        payload = request.get_json(force=True, silent=True) or {}
-        user_raw = payload.get("user")
-        label_raw = payload.get("label")
-        if not user_raw or not label_raw:
-            return jsonify({"error": "Missing 'user' or 'label' in JSON body"}), 400
-        user = sm.normalize_text(user_raw)
-        label = sm.normalize_text(label_raw)
+        # Get form fields
+        user_raw = request.form.get("user", "").strip()
+        group_name_raw = request.form.get("group_name", "").strip()
+        if not user_raw or not group_name_raw:
+            set_status("ERROR: Missing 'user' or 'group_name'")
+            return jsonify({"error": "Missing 'user' or 'group_name' in form"}), 400
 
+        user = sm.normalize_text(user_raw)
+        label = sm.normalize_text(group_name_raw)
+
+        # Target folder to delete
         target_dir = AUDIO_DIR / user / label
         if not target_dir.exists():
             return jsonify({"error": "Group not found"}), 404
 
-        # remove files
-        for p in target_dir.glob("*"):
+        # Delete all files in the folder
+        saved_deleted = []
+        for f in target_dir.glob("*"):
             try:
-                p.unlink()
+                f.unlink()
+                saved_deleted.append(str(f))
             except Exception:
                 pass
         try:
             target_dir.rmdir()
         except Exception:
-            # if folder not empty or other error, ignore
-            pass
+            pass  # ignore if folder not empty
 
-        # update profile index: remove examples with that label
+        # Update profile index: remove examples with this label
         prof = sm.load_profile(user)
-        examples = [ex for ex in prof.get("examples", []) if ex.get("label") != label]
-        prof["examples"] = examples
+        prof["examples"] = [ex for ex in prof.get("examples", []) if ex.get("label") != label]
         sm.save_profile(user, prof)
 
-        # retrain model (best-effort)
+        # Retrain model (same as upload)
         try:
             set_status(f"TRAINING:{user}")
             sm.train_model(user)
             set_status("OK")
         except Exception as e:
             set_status(f"ERROR: retrain failed: {e}")
-            return jsonify({"message": "group deleted", "retrain_error": str(e)}), 200
+            return jsonify({
+                "message": "Group deleted",
+                "deleted_files": saved_deleted,
+                "retrain_error": str(e)
+            }), 200
 
-        return jsonify({"message": "group deleted and model retrained"}), 200
+        return jsonify({
+            "message": "Group deleted and model retrained",
+            "deleted_files": saved_deleted
+        }), 200
 
-    except Exception as e:
-        set_status(f"ERROR: {e}")
+    except Exception as exc:
+        set_status(f"ERROR: {str(exc)}")
         traceback.print_exc()
-        return jsonify({"error": str(e)}), 500
+        return jsonify({"error": str(exc)}), 500
 
 
 # ========== Lightweight health endpoint ==========
@@ -319,5 +328,4 @@ def health():
 
 # ========== Start server ==========
 if __name__ == "__main__":
-    # If you want to run on a different port, change below; default set to 8080 for parity
     app.run(host="0.0.0.0", port=8080)
