@@ -6,3 +6,4 @@ librosa
 scikit-learn
 joblib
 flask
+requests
