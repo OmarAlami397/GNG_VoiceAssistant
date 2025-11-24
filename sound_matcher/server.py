@@ -99,6 +99,12 @@ def upload_profile_group():
             return jsonify({"error": "Missing 'user' form field"}), 400
         user = sm.normalize_text(user_raw)
 
+        id_raw = request.form.get("id", "").strip()
+        if not id_raw:
+            set_status("ERROR: Missing 'id' in form")
+            return jsonify({"error": "Missing 'id' form field"}), 400
+        
+
         group_name_raw = request.form.get("group_name", "").strip() or "default"
         label = sm.normalize_text(group_name_raw)
 
@@ -165,7 +171,7 @@ def upload_profile_group():
         # Train the model for this user (best-effort)
         try:
             set_status(f"TRAINING:{user}")
-            sm.train_model(user)
+            sm.enroll_from_dir(user, label, id_raw, stash_dir)
             set_status("OK")
         except Exception as e:
             set_status(f"ERROR: training failed: {e}")
