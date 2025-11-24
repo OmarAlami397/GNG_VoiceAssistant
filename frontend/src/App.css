@@ -4,7 +4,7 @@ html, body, #root {
   padding: 0;
 }
 
-/* Container for everything */
+/*container for everything */
 .page-container {
   position: relative;
   height: 100%;
@@ -13,7 +13,7 @@ html, body, #root {
   overflow: hidden;
 }
 
-/* Purple top rectangle */
+/*top rectangle */
 .top-rectangle {
   position: absolute;
   top: 0;
@@ -24,10 +24,10 @@ html, body, #root {
   z-index: 1;
 }
 
-/* Purple left rectangle */
+/*left rectangle */
 .left-rectangle {
   position: absolute;
-  top: 100px; /* below top rectangle */
+  top: 100px; 
   left: 0;
   width: 200px;
   height: calc(100% - 100px);
@@ -37,7 +37,7 @@ html, body, #root {
   justify-content: center;
 }
 
-/* Buttons placed on the left purple bar */
+/*side bar buttons*/
 .border-buttons {
   position: relative;
   top: -400px;
@@ -49,7 +49,7 @@ html, body, #root {
   z-index: 2; /* above purple background */
 }
 
-/* Button styling */
+
 .border-buttons button {
   background-color: transparent;
   color: white;
@@ -62,9 +62,9 @@ html, body, #root {
    display: flex;
   justify-content: center;
   align-items: center;
-  width: 60px;   /* set a consistent width */
-  height: 60px;  /* set a consistent height */
-  font-size: 24px; /* optional, just in case */
+  width: 60px;   
+  height: 60px;  
+  font-size: 24px; 
 }
 
 .border-buttons button:hover {
@@ -75,20 +75,20 @@ html, body, #root {
 .Enter {
   display: flex;
   flex-direction: column;
-  justify-content: center; /* vertical center */
-  align-items: center;     /* horizontal center */
-  height: calc(100vh - 140px); /* fill remaining space below top bar */
+  justify-content: center; 
+  align-items: center;     
+  height: calc(100vh - 140px); 
   text-align: center;
 }
 
-/* Main content area */
+
 .content {
   position: relative;
   z-index: 0;
-  margin-left: 200px; /* make room for left rectangle */
-  margin-top: 100px;  /* make room for top rectangle */
+  margin-left: 200px; 
+  margin-top: 100px; 
   padding: 40px;
-  transform: scale(1.7); /* adjust this value as needed (1.0 = normal size) */
+  font-size: 1.5rem
 }
 
 .input-box {
@@ -111,7 +111,8 @@ html, body, #root {
   background-color: purple;
   color: white;
   border: none;
-  padding: 10px 20px;
+  padding: 15px 25px;
+  font-size: 18px;
   border-radius: 8px;
   cursor: pointer;
   font-weight: bold;
@@ -128,8 +129,9 @@ html, body, #root {
   background-color: #4b0082;
   color: white;
   border: none;
-  width: 80px;
-  height: 80px;
+ width: 100px;
+  height: 100px;
+  font-size: 22px;
   border-radius: 50%;
   cursor: pointer;
   font-weight: bold;
@@ -189,5 +191,48 @@ html, body, #root {
 .recording-active .recording-indicator {
   visibility: visible;
 }
+.table-container {
+  font-size: 1.2rem;
+  padding: 10px;
+  overflow-x: auto;  
+}
 
+.table-container table {
+  width: 100%;
+  border-collapse: collapse;
+  table-layout: fixed; 
+}
+
+.table-container th,
+.table-container td {
+  padding: 12px 10px; 
+}
+
+.title-cell {
+  max-width: 150px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+th {
+  position: sticky;
+  top: 0;
+  background: #f0f0f0;
+  z-index: 1;
+  padding: 8px;
+  border-bottom: 2px solid #ccc;
+}
+
+td {
+  padding: 8px;
+  border-bottom: 1px solid gray;
+}
+
+.title-cell {
+  max-width: 150px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
 
