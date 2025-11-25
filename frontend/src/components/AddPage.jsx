@@ -18,9 +18,8 @@ export default function AddPage({ inputValue, setInputValue, onComplete }) {
   const [completed, setCompleted] = useState(false);
   //flag for duplicate command
   const [commandExists, setCommandExists] = useState(false);
-
-
-
+  //script ID input
+  const [scriptId, setScriptId] = useState("");
 
   //sync title with input prop
   useEffect(() => {
@@ -111,14 +110,6 @@ export default function AddPage({ inputValue, setInputValue, onComplete }) {
     }
   };
 
-  //auto-save when 10 recordings reached
-  useEffect(() => {
-    if (count === 10) {
-      setCompleted(true);
-      saveAllRecordings();
-    }
-  }, [count]);
-
   //save all recordings to database
   const saveAllRecordings = async () => {
     const completedCommand = {
@@ -132,17 +123,25 @@ export default function AddPage({ inputValue, setInputValue, onComplete }) {
       body: JSON.stringify(completedCommand),
     });
 
-
     //upload to pi
     //await uploadGroupToPi(title, recordings);
 
     if (onComplete) onComplete(completedCommand);
 
     setRecordings([]);
+    setScriptId(""); // Reset Script ID when recordings are done
   };
 
+  //auto-save when 10 recordings reached
+  useEffect(() => {
+    if (count === 10) {
+      setCompleted(true);
+      saveAllRecordings();
+    }
+  }, [count]);
+
   return (
-    <div className="Enter">
+    <div className="Enter add-page-container">
       <h1>Add Command</h1>
 
       <input
@@ -181,6 +180,21 @@ export default function AddPage({ inputValue, setInputValue, onComplete }) {
       {commandExists && (
         <p style={{ color: "orange" }}>Command already exists</p>
       )}
+
+{/*extra */}
+      <div className="script-id-container">
+        <label htmlFor="scriptId" className="script-id-label">
+          Script ID:
+        </label>
+        <input
+          id="scriptId"
+          type="text"
+          placeholder="Enter Script ID"
+          value={scriptId}
+          onChange={(e) => setScriptId(e.target.value)}
+          className="input-box script-id-input"
+        />
+      </div>
     </div>
   );
 }
