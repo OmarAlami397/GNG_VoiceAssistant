@@ -60,7 +60,7 @@ def set_status(msg: str) -> None:
     try:
         STATUS_FILE.write_text(msg)
     except Exception:
-        # best-effort: print stack if we can't write
+        # best-effort: print stack if can't write
         print("Could not write status:", traceback.format_exc())
     print("[STATUS]", msg)
 

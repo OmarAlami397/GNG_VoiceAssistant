@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-//import { uploadGroupToPi } from "src/backend/piApi.js";
+import { uploadGroupToPi } from "../backend/piApi.js";
 
 export default function AddPage({ inputValue, setInputValue, onComplete }) {
   //current command title
@@ -134,7 +134,7 @@ export default function AddPage({ inputValue, setInputValue, onComplete }) {
 
 
     //upload to pi
-    //await uploadGroupToPi(title, recordings);
+    await uploadGroupToPi(title, recordings);
 
     if (onComplete) onComplete(completedCommand);
 
