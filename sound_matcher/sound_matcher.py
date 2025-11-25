@@ -1,5 +1,4 @@
 import json
-import time
 from pathlib import Path
 from typing import Dict, List, Optional
 
@@ -21,8 +20,8 @@ C = "\033[96m"
 # ===== Audio & model settings =====
 SAMPLE_RATE = 16000
 CHANNELS = 1
-REC_LEN_SEC = 3.0        # window length for commands (good for slower speech)
-RMS_GATE = 0.001         # very permissive gate; adjust if needed
+REC_LEN_SEC = 3.0        # window length for commands
+RMS_GATE = 0.001         # permissive gate; adjust if needed
 
 ENROLL_SAMPLES = 10      # mic recordings per command
 
@@ -65,9 +64,14 @@ def model_path(user: str) -> Path:
 def load_profile(user: str) -> dict:
     p = profile_path(user)
     if p.exists():
-        return json.loads(p.read_text())
-    # list of {"path": "...", "label": "..."}
-    return {"examples": []}
+        prof = json.loads(p.read_text())
+    else:
+        prof = {}
+
+    # ensure keys exist
+    prof.setdefault("examples", [])        # list[{"path","label"}]
+    prof.setdefault("scripts", {})         # dict[label -> script_id]
+    return prof
 
 
 def save_profile(user: str, prof: dict) -> None:
@@ -232,13 +236,22 @@ def decide_from_proba(classes: np.ndarray, proba: np.ndarray) -> str:
     return "UNKNOWN"
 
 
-# ===== Enrollment logic =====
-def enroll_from_mic(user: str, label: str) -> None:
+# ===== Enrollment logic (with script_id) =====
+def enroll_from_mic(user: str, label: str, script_id: str) -> None:
+    """
+    Record ENROLL_SAMPLES clips from the mic for a label,
+    store them, store script_id for that label, then train.
+    """
     user = normalize_text(user)
     label = normalize_text(label)
+    script_id = script_id.strip()
 
     prof = load_profile(user)
-    examples = prof.get("examples", [])
+    examples = prof["examples"]
+    scripts = prof["scripts"]
+
+    # store/overwrite script_id for this label
+    scripts[label] = script_id
 
     stash_dir = AUDIO_DIR / user / label
     stash_dir.mkdir(parents=True, exist_ok=True)
@@ -263,16 +276,26 @@ def enroll_from_mic(user: str, label: str) -> None:
         examples.append({"path": str(fname), "label": label})
 
     prof["examples"] = examples
+    prof["scripts"] = scripts
     save_profile(user, prof)
     train_model(user)
 
 
-def enroll_from_dir(user: str, label: str, dir_path: Path) -> None:
+def enroll_from_dir(user: str, label: str, script_id: str, dir_path: Path) -> None:
+    """
+    Enroll a label using existing WAV files from a folder,
+    and store script_id for that label.
+    """
     user = normalize_text(user)
     label = normalize_text(label)
+    script_id = script_id.strip()
 
     prof = load_profile(user)
-    examples = prof.get("examples", [])
+    examples = prof["examples"]
+    scripts = prof["scripts"]
+
+    # store/overwrite script_id for this label
+    scripts[label] = script_id
 
     wavs = sorted(p for p in dir_path.glob("*.wav") if p.is_file())
     if not wavs:
@@ -293,6 +316,7 @@ def enroll_from_dir(user: str, label: str, dir_path: Path) -> None:
         examples.append({"path": str(fname), "label": label})
 
     prof["examples"] = examples
+    prof["scripts"] = scripts
     save_profile(user, prof)
     train_model(user)
 
@@ -303,6 +327,9 @@ def predict_from_file(user: str, wav_path: Path) -> None:
     if not wav_path.exists():
         print(Y + "File does not exist." + R)
         return
+
+    prof = load_profile(user)
+    scripts = prof["scripts"]
 
     y = read_wav(wav_path)
     val = rms(y)
@@ -316,9 +343,16 @@ def predict_from_file(user: str, wav_path: Path) -> None:
     decision = decide_from_proba(classes, proba)
     print(B + "Probabilities:" + R)
     for c, p in sorted(zip(classes, proba), key=lambda x: x[1], reverse=True):
-        print(f"  {c:15s} {p:.3f}")
+        sid = scripts.get(c, "")
+        label_display = f"{c} (script_id={sid})" if sid else c
+        print(f"  {label_display:25s} {p:.3f}")
+
     if decision != "UNKNOWN":
-        print(G + f"DECISION: {decision}" + R)
+        script_id = scripts.get(decision, "")
+        if script_id:
+            print(G + f"DECISION: {decision}  (script_id={script_id})" + R)
+        else:
+            print(G + f"DECISION: {decision}" + R)
     else:
         print(Y + "DECISION: UNKNOWN" + R)
 
@@ -326,13 +360,16 @@ def predict_from_file(user: str, wav_path: Path) -> None:
 def listen_once(user: str) -> None:
     """
     Push-to-talk: wait for ENTER, record one window, classify once,
-    then return to the main menu.
+    then return to the main menu. Also shows script_id.
     """
     user = normalize_text(user)
     bundle = load_model(user)
     if bundle is None:
         print(Y + "No model trained yet for this user. Enroll some commands first." + R)
         return
+
+    prof = load_profile(user)
+    scripts = prof["scripts"]
 
     print(C + "\nPush-to-talk mode\n" + R)
     print("When you're ready:")
@@ -363,27 +400,37 @@ def listen_once(user: str) -> None:
 
     print(B + "Probabilities:" + R)
     for c, p in sorted(zip(classes, proba), key=lambda x: x[1], reverse=True):
-        print(f"  {c:15s} {p:.3f}")
+        sid = scripts.get(c, "")
+        label_display = f"{c} (script_id={sid})" if sid else c
+        print(f"  {label_display:25s} {p:.3f}")
 
     if decision != "UNKNOWN":
-        print(G + f"\n[DETECTED] {decision}" + R)
+        script_id = scripts.get(decision, "")
+        if script_id:
+            print(G + f"\n[DETECTED] {decision} (script_id={script_id})" + R)
+        else:
+            print(G + f"\n[DETECTED] {decision}" + R)
     else:
         print(Y + "\nNo confident command recognized (UNKNOWN)." + R)
-
-    # returns to menu after one shot
 
 
 def list_labels(user: str) -> None:
     user = normalize_text(user)
     prof = load_profile(user)
-    labels = sorted(set(ex["label"] for ex in prof.get("examples", [])))
+    examples = prof["examples"]
+    scripts = prof["scripts"]
+
+    labels = sorted(set(ex["label"] for ex in examples))
     if not labels:
         print(Y + "No commands enrolled yet." + R)
         return
+
     print(B + "Commands for this user:" + R)
     for lbl in labels:
-        n = sum(1 for ex in prof["examples"] if ex["label"] == lbl)
-        print(f"  - {lbl}  ({n} samples)")
+        n = sum(1 for ex in examples if ex["label"] == lbl)
+        sid = scripts.get(lbl, "")
+        extra = f" (script_id={sid})" if sid else ""
+        print(f"  - {lbl}  ({n} samples){extra}")
 
 
 def reset_user(user: str) -> None:
@@ -413,7 +460,7 @@ def reset_user(user: str) -> None:
 
 # ===== Menu =====
 def main() -> None:
-    print(B + "\nSound Matcher (librosa + RandomForest) — Terminal Demo" + R)
+    print(B + "\nSound Matcher Demo (librosa + RandomForest)" + R)
     print("Push-to-talk: press ENTER to record, classify once, then return.\n")
     user = input("Profile name (e.g., alice): ").strip() or "demo_user"
     user = normalize_text(user)
@@ -431,11 +478,13 @@ def main() -> None:
 
         if choice == "1":
             lbl = input("Command name (e.g., lights_on): ").strip()
-            enroll_from_mic(user, lbl)
+            script_id = input("Script ID for this command: ").strip()
+            enroll_from_mic(user, lbl, script_id)
         elif choice == "2":
             lbl = input("Command name (e.g., lights_on): ").strip()
+            script_id = input("Script ID for this command: ").strip()
             folder = input("Folder with WAVs (~10): ").strip()
-            enroll_from_dir(user, lbl, Path(folder))
+            enroll_from_dir(user, lbl, script_id, Path(folder))
         elif choice == "3":
             path = input("Path to WAV file: ").strip()
             predict_from_file(user, Path(path))
