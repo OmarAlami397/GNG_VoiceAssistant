@@ -1,3 +1,4 @@
 .venv/
 sound_profiles/
 node_modules/
+frontend/src/backend/voicebridge.db
