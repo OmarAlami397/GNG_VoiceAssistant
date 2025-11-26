@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { uploadGroupToPi } from "../backend/piApi.js";
 
-export default function AddPage({ inputValue, setInputValue, onComplete }) {
+export default function AddPage({ inputValue, setInputValue, onComplete, credentials}) {
   //current command title
   const [title, setTitle] = useState("");
   //original title when recording started
