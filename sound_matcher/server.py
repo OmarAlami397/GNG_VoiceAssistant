@@ -171,7 +171,12 @@ def upload_profile_group():
         # Train the model for this user (best-effort)
         try:
             set_status(f"TRAINING:{user}")
-            sm.enroll_from_dir(user, label, id_raw, stash_dir)
+            prof = sm.load_profile(user)
+            scripts = prof.get("scripts", {})
+            scripts[label] = id_raw  # Add script_id
+            prof["scripts"] = scripts
+            sm.save_profile(user, prof)
+            sm.train_model(user)
             set_status("OK")
         except Exception as e:
             set_status(f"ERROR: training failed: {e}")
