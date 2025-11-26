@@ -23,7 +23,8 @@ async function initDb() {
   await db.exec(`
     CREATE TABLE IF NOT EXISTS commands (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
-      title TEXT NOT NULL
+      title TEXT NOT NULL,
+      script_id TEXT UNIQUE
     );
   `);
 
@@ -54,14 +55,15 @@ app.get("/recordings", async (req, res) => {
 
 //save 10 recordings for a command
 app.post("/recordings/batch", async (req, res) => {
-  const { title, recordings } = req.body;
+  const { title, recordings, scriptId } = req.body;
 
   if (!title || !recordings || recordings.length !== 10) {
     return res.status(400).send("Must provide 10 recordings and a title.");
   }
 
   //create new command
-  const cmd = await db.run("INSERT INTO commands (title) VALUES (?)", [title]);
+  const cmd = await db.run("INSERT INTO commands (title, script_id) VALUES (?, ?)", 
+      [title, scriptId || null]);
   const commandId = cmd.lastID;
 
   //save all 10 recordings
@@ -89,6 +91,16 @@ app.post("/commands/check", async (req, res) => {
   }
 
   return res.json({ exists: false });
+});
+
+//check if script ID already exists
+app.post("/commands/check-script", async (req, res) => {
+  const { scriptId } = req.body;
+
+  if (!scriptId) return res.json({ exists: false });
+
+  const row = await db.get("SELECT * FROM commands WHERE script_id = ?", [scriptId]);
+  return res.json({ exists: !!row });
 });
 
 //delete command and all its recordings

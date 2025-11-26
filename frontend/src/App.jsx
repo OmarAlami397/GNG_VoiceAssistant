@@ -5,7 +5,7 @@ import Sidebar from "./components/Sidebar.jsx";
 import HomePage from "./components/HomePage.jsx";
 import AddPage from "./components/AddPage.jsx";
 import EditPage from "./components/EditPage.jsx";
-import Auth from "./components/Auth.jsx"; 
+import Auth from "./components/Auth.jsx";
 
 export default function App() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -14,26 +14,28 @@ export default function App() {
   const [inputValue, setInputValue] = useState("");
   const [newCompletedCommand, setNewCompletedCommand] = useState(null);
 
-
   useEffect(() => {
-    const savedAuth = sessionStorage.getItem('isAuthenticated');
-    const savedCredentials = sessionStorage.getItem('credentials');
+    const savedIp = localStorage.getItem('hass_ip');
+    const savedToken = localStorage.getItem('hass_token');
     
-    if (savedAuth === 'true' && savedCredentials) {
+    if (savedIp && savedToken) {
       setIsAuthenticated(true);
-      setCredentials(JSON.parse(savedCredentials));
+      setCredentials({ ip: savedIp, token: savedToken });
     }
   }, []);
 
   const handleAuthSuccess = (authCredentials) => {
     setIsAuthenticated(true);
     setCredentials(authCredentials);
-    
-
-    sessionStorage.setItem('isAuthenticated', 'true');
-    sessionStorage.setItem('credentials', JSON.stringify(authCredentials));
-    
     console.log('Authentication successful:', authCredentials);
+  };
+
+  const handleResetIP = () => {
+    localStorage.removeItem('hass_ip');
+    localStorage.removeItem('hass_token');
+    setIsAuthenticated(false);
+    setCredentials(null);
+    setActivePage("Home");
   };
 
   const renderPage = () => {
@@ -66,15 +68,17 @@ export default function App() {
     }
   };
 
-
   if (!isAuthenticated) {
     return <Auth onAuthSuccess={handleAuthSuccess} />;
   }
 
- 
   return (
     <div className="page-container">
-      <Sidebar activePage={activePage} setActivePage={setActivePage} />
+      <Sidebar 
+        activePage={activePage} 
+        setActivePage={setActivePage} 
+        onResetIP={handleResetIP}
+      />
       <div className="content">{renderPage()}</div>
     </div>
   );

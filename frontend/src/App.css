@@ -22,6 +22,10 @@ html, body, #root {
   height: 100px;
   background-color: purple;
   z-index: 1;
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  padding-right: 20px;
 }
 
 /*left rectangle */
@@ -278,4 +282,23 @@ td {
 
 .script-id-input {
   width: 200px;
+}
+
+
+/*reset button"*/
+.reset-ip-button {
+  background: transparent;
+  border: 2px solid white;
+  color: white;
+  padding: 8px 12px;
+  border-radius: 5px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  display: flex;
+  align-items: center;
+}
+
+.reset-ip-button:hover {
+  background: white;
+  color: purple;
 }

@@ -1,10 +1,18 @@
 import React from "react";
-import { FaHome, FaPlusCircle, FaEdit } from "react-icons/fa";
+import { FaHome, FaPlusCircle, FaEdit, FaSync } from "react-icons/fa";
 
-export default function Sidebar({ activePage, setActivePage }) {
+export default function Sidebar({ activePage, setActivePage, onResetIP }) {
   return (
     <>
-      <div className="top-rectangle"></div>
+      <div className="top-rectangle">
+        <button 
+          className="reset-ip-button"
+          onClick={onResetIP}
+          title="Reset IP & Token"
+        >
+          <FaSync size={20} />
+        </button>
+      </div>
 
       <div className="left-rectangle">
         <div className="border-buttons">

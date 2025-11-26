@@ -11,15 +11,16 @@ export async function openDb() {
 export async function initDb() {
   const db = await openDb();
 
-  // Commands table (only title)
+  //commands table
   await db.exec(`
     CREATE TABLE IF NOT EXISTS commands (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
-      title TEXT NOT NULL
+      title TEXT NOT NULL,
+      script_id TEXT UNIQUE
     );
   `);
 
-  // Recordings table (only audio + version)
+  //recordings table
   await db.exec(`
     CREATE TABLE IF NOT EXISTS recordings (
       id INTEGER PRIMARY KEY AUTOINCREMENT,

@@ -18,6 +18,10 @@ export default function AddPage({ inputValue, setInputValue, onComplete }) {
   const [completed, setCompleted] = useState(false);
   //flag for duplicate command
   const [commandExists, setCommandExists] = useState(false);
+  //flag for duplicate script ID
+  const [scriptIdExists, setScriptIdExists] = useState(false);
+  //flag for empty script ID
+  const [scriptIdEmpty, setScriptIdEmpty] = useState(false);
   //script ID input
   const [scriptId, setScriptId] = useState("");
 
@@ -31,17 +35,25 @@ export default function AddPage({ inputValue, setInputValue, onComplete }) {
 
   //check if command name already in database
   const checkCommandExists = async (commandTitle) => {
-    try {
-      const response = await fetch("http://localhost:3001/recordings");
-      const allRecordings = await response.json();
+    const response = await fetch("http://localhost:3001/recordings");
+    const allRecordings = await response.json();
 
-      return allRecordings.some(recording =>
-        recording.title.toLowerCase() === commandTitle.toLowerCase()
-      );
-    } catch (error) {
-      console.error("Error checking command:", error);
-      return false;
-    }
+    return allRecordings.some(recording =>
+      recording.title.toLowerCase() === commandTitle.toLowerCase()
+    );
+  };
+
+  //check if script ID already exists
+  const checkScriptIdExists = async (scriptId) => {
+    if (!scriptId.trim()) return false;
+    
+    const response = await fetch("http://localhost:3001/commands/check-script", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ scriptId }),
+    });
+    const result = await response.json();
+    return result.exists;
   };
 
   //reset recording progress
@@ -56,9 +68,15 @@ export default function AddPage({ inputValue, setInputValue, onComplete }) {
   const handleRecord = async () => {
     if (!title.trim()) return;
 
+    // Check if script ID is empty
+    if (!scriptId.trim()) {
+      setScriptIdEmpty(true);
+      return;
+    }
+
     //check for duplicate command
-    const exists = await checkCommandExists(title);
-    if (exists) {
+    const commandExists = await checkCommandExists(title);
+    if (commandExists) {
       setCommandExists(true);
       setRecordings([]);
       setCount(0);
@@ -67,7 +85,16 @@ export default function AddPage({ inputValue, setInputValue, onComplete }) {
       return;
     }
 
+    //check for duplicate script ID
+    const scriptIdExists = await checkScriptIdExists(scriptId);
+    if (scriptIdExists) {
+      setScriptIdExists(true);
+      return;
+    }
+
     setCommandExists(false);
+    setScriptIdExists(false);
+    setScriptIdEmpty(false);
 
     if (initialTitle && title !== initialTitle) {
       setRecordings([]);
@@ -115,6 +142,7 @@ export default function AddPage({ inputValue, setInputValue, onComplete }) {
     const completedCommand = {
       title,
       recordings,
+      scriptId: scriptId.trim()
     };
 
     await fetch("http://localhost:3001/recordings/batch", {
@@ -124,13 +152,13 @@ export default function AddPage({ inputValue, setInputValue, onComplete }) {
     });
 
     //upload to pi
-    await uploadGroupToPi(title, recordings);
+    //await uploadGroupToPi(title, recordings);
 
     if (onComplete) onComplete(completedCommand);
 
     setRecordings([]);
-    setScriptId(""); // Reset Script ID when recordings are done
-  };
+    setScriptId("");
+  }
 
   //auto-save when 10 recordings reached
   useEffect(() => {
@@ -139,6 +167,21 @@ export default function AddPage({ inputValue, setInputValue, onComplete }) {
       saveAllRecordings();
     }
   }, [count]);
+
+  //reset script ID exists flag when script ID changes
+  useEffect(() => {
+    if (scriptIdExists || scriptIdEmpty) {
+      setScriptIdExists(false);
+      setScriptIdEmpty(false);
+    }
+  }, [scriptId]);
+
+  //same with command
+  useEffect(() => {
+    if (commandExists) {
+      setCommandExists(false);
+    }
+  }, [title]);
 
   return (
     <div className="Enter add-page-container">
@@ -162,9 +205,25 @@ export default function AddPage({ inputValue, setInputValue, onComplete }) {
         }}
       />
 
+      <div className="script-id-container">
+        <label htmlFor="scriptId" className="script-id-label">
+          Script ID: *
+        </label>
+        <input
+          id="scriptId"
+          type="text"
+          placeholder="Enter Script ID (required)"
+          value={scriptId}
+          onChange={(e) => setScriptId(e.target.value)}
+          className="input-box script-id-input"
+          required
+        />
+      </div>
+
       <button
         className={`record-button ${isRecording ? "active" : ""}`}
         onClick={handleRecord}
+        disabled={scriptIdExists}
       >
         {isRecording ? "Stop Recording" : "Record"}
       </button>
@@ -181,20 +240,13 @@ export default function AddPage({ inputValue, setInputValue, onComplete }) {
         <p style={{ color: "orange" }}>Command already exists</p>
       )}
 
-{/*extra */}
-      <div className="script-id-container">
-        <label htmlFor="scriptId" className="script-id-label">
-          Script ID:
-        </label>
-        <input
-          id="scriptId"
-          type="text"
-          placeholder="Enter Script ID"
-          value={scriptId}
-          onChange={(e) => setScriptId(e.target.value)}
-          className="input-box script-id-input"
-        />
-      </div>
+      {scriptIdExists && (
+        <p style={{ color: "orange" }}>Script ID already exists</p>
+      )}
+
+      {scriptIdEmpty && (
+        <p style={{ color: "red" }}>Script ID is required</p>
+      )}
     </div>
   );
 }

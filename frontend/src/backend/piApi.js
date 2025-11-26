@@ -17,17 +17,27 @@ export async function convertBase64ToWav(base64String) {
   return new Blob([wavBuffer], { type: "audio/wav" });
 }
 //upload to raspberry pi
-export async function uploadGroupToPi(commandTitle, audioFiles) {
+export async function uploadGroupToPi(commandTitle, audioFiles, credentials, scriptId) {
     const formData = new FormData();
     formData.append("user", "default_user"); 
     formData.append("group_name", commandTitle); 
     
-    //add all udio files
-    for (let i = 0; i < audioFiles.length; i++) {
-    const wavBlob = await convertBase64ToWav(audioFiles[i].file_base64);
-    formData.append("audio_files", wavBlob, `recording_${i + 1}.wav`);
+    // Add LLAT and IP
+    if (credentials) {
+        formData.append("ip", credentials.ip);
+        formData.append("token", credentials.token);
     }
-
+    
+    // Add script ID
+    if (scriptId) {
+        formData.append("script_id", scriptId);
+    }
+    
+    // Add all audio files
+    for (let i = 0; i < audioFiles.length; i++) {
+        const wavBlob = await convertBase64ToWav(audioFiles[i].file_base64);
+        formData.append("audio_files", wavBlob, `recording_${i + 1}.wav`);
+    }
 
     formData.append("id", "121212121");
     
