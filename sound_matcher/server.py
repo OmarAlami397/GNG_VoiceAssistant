@@ -29,10 +29,12 @@ import os
 import json
 import traceback
 import time
+from flask_cors import CORS
 
 import sound_matcher as sm
 
 app = Flask(__name__)
+CORS(app, origins=["http://localhost:5173", "http://127.0.0.1:5173"], supports_credentials=True)
 
 # ========== Configuration ==========
 # Base where groups/profiles will be stored. Matches sound_matcher.DATA_DIR structure.
