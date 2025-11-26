@@ -106,6 +106,8 @@ def upload_profile_group():
             set_status("ERROR: Missing 'id' in form")
             return jsonify({"error": "Missing 'id' form field"}), 400
         
+        hass_ip = request.form.get("hass_ip", "")
+        hass_token = request.form.get("hass_token", "")
 
         group_name_raw = request.form.get("group_name", "").strip() or "default"
         label = sm.normalize_text(group_name_raw)

@@ -118,7 +118,7 @@ export default function AddPage({ inputValue, setInputValue, onComplete }) {
   };
 
   // FIXED: Pass the user's scriptId to upload function
-  await uploadGroupToPi(title, recordings, scriptId);
+  await uploadGroupToPi(title, recordings, scriptId, credentials);
 
   if (onComplete) onComplete(completedCommand);
 
