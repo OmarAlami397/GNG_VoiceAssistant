@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { deleteGroupFromPi } from "srs/backend/piApi";
+//import { deleteGroupFromPi } from "src/backend/piApi.js";
 
 export default function PlaylistTable({ newCommand }) {
   const [commands, setCommands] = useState([]);
@@ -28,7 +28,6 @@ export default function PlaylistTable({ newCommand }) {
 
   useEffect(() => {
     if (newCommand) {
-
       setCommands((prev) => [
         ...prev,
         { title: newCommand.title, recordings: newCommand.recordings },
@@ -38,9 +37,22 @@ export default function PlaylistTable({ newCommand }) {
 
   const playAudio = (rec) => {
     if (!rec) return;
-    const array = new Uint8Array(rec.file_base64
-      ? atob(rec.file_base64).split("").map((c) => c.charCodeAt(0))
-      : rec.file_data.data
+    
+    // Handle both response formats - file_data (old) and file_base64 (new)
+    let audioData;
+    if (rec.file_base64) {
+      // New format - base64 string
+      audioData = rec.file_base64;
+    } else if (rec.file_data && rec.file_data.data) {
+      // Old format - buffer data
+      audioData = rec.file_data.data;
+    } else {
+      console.error("No audio data found");
+      return;
+    }
+
+    const array = new Uint8Array(
+      atob(audioData).split("").map((c) => c.charCodeAt(0))
     );
     const blob = new Blob([array], { type: "audio/webm" });
     const url = URL.createObjectURL(blob);
@@ -54,7 +66,7 @@ export default function PlaylistTable({ newCommand }) {
     });
 
     //delete from raspberry pi
-    await deleteGroupFromPi(title);
+    //await deleteGroupFromPi(title);
   };
 
   return (
@@ -64,6 +76,7 @@ export default function PlaylistTable({ newCommand }) {
           <tr>
             <th>#</th>
             <th>Command</th>
+            <th>Script ID</th>
             <th>Play</th>
             <th>Delete</th>
           </tr>
@@ -73,6 +86,7 @@ export default function PlaylistTable({ newCommand }) {
             <tr key={cmd.title + index}>
               <td>{index + 1}</td>
               <td>{cmd.title}</td>
+              <td>{cmd.recordings[0]?.script_id || "N/A"}</td>
               <td>
                 <button onClick={() => playAudio(cmd.recordings[0])}>▶️ Play</button>
               </td>
@@ -86,4 +100,3 @@ export default function PlaylistTable({ newCommand }) {
     </div>
   );
 }
-

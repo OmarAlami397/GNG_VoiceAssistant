@@ -1,3 +1,21 @@
+import audioBufferToWav from "audiobuffer-to-wav";
+
+export async function convertBase64ToWav(base64String) {
+  // Decode base64 → ArrayBuffer
+  const byteCharacters = atob(base64String);
+  const byteArray = new Uint8Array(byteCharacters.length);
+  for (let i = 0; i < byteCharacters.length; i++) {
+    byteArray[i] = byteCharacters.charCodeAt(i);
+  }
+
+  // Decode audio data
+  const audioContext = new AudioContext();
+  const audioBuffer = await audioContext.decodeAudioData(byteArray.buffer);
+
+  // Convert AudioBuffer → WAV Blob
+  const wavBuffer = audioBufferToWav(audioBuffer);
+  return new Blob([wavBuffer], { type: "audio/wav" });
+}
 //upload to raspberry pi
 export async function uploadGroupToPi(commandTitle, audioFiles) {
     const formData = new FormData();
@@ -5,21 +23,16 @@ export async function uploadGroupToPi(commandTitle, audioFiles) {
     formData.append("group_name", commandTitle); 
     
     //add all udio files
-    audioFiles.forEach((audioFile, index) => {
-        //convert to blob
-        const byteCharacters = atob(audioFile.file_base64);
-        const byteNumbers = new Array(byteCharacters.length);
-        for (let i = 0; i < byteCharacters.length; i++) {
-            byteNumbers[i] = byteCharacters.charCodeAt(i);
-        }
-        const byteArray = new Uint8Array(byteNumbers);
-        const blob = new Blob([byteArray], { type: "audio/webm" });
-        
-        formData.append("audio_files", blob, `recording_${index + 1}.webm`);
-    });
+    for (let i = 0; i < audioFiles.length; i++) {
+    const wavBlob = await convertBase64ToWav(audioFiles[i].file_base64);
+    formData.append("audio_files", wavBlob, `recording_${i + 1}.wav`);
+    }
 
+
+    formData.append("id", "121212121");
+    
     try {
-        const response = await fetch("http://raspberrypi.local:8080/upload_profile_group", {
+        const response = await fetch("http://127.0.0.1:8080/upload_profile_group", {
             method: "POST",
             body: formData
         });
@@ -39,7 +52,7 @@ export async function deleteGroupFromPi(commandTitle) {
     formData.append("group_name", commandTitle); //command text as group name
 
     try {
-        const response = await fetch("http://raspberrypi.local:8080/delete_group", {
+        const response = await fetch("http://127.0.0.1:8080/delete_group", {
             method: "POST",
             body: formData
         });
