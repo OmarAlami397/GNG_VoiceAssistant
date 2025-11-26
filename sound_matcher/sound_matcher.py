@@ -10,6 +10,9 @@ from sklearn.ensemble import RandomForestClassifier
 from sklearn.preprocessing import LabelEncoder
 import joblib
 
+from home_assistant_interfacing import TriggerScript
+import requests
+
 # ===== Terminal colours =====
 B = "\033[1m"
 R = "\033[0m"
@@ -351,6 +354,7 @@ def predict_from_file(user: str, wav_path: Path) -> None:
         script_id = scripts.get(decision, "")
         if script_id:
             print(G + f"DECISION: {decision}  (script_id={script_id})" + R)
+            TriggerScript("IP ADDRESS", "ACCESSTOKEN", script_id)
         else:
             print(G + f"DECISION: {decision}" + R)
     else:
@@ -408,6 +412,7 @@ def listen_once(user: str) -> None:
         script_id = scripts.get(decision, "")
         if script_id:
             print(G + f"\n[DETECTED] {decision} (script_id={script_id})" + R)
+            TriggerScript("IP ADDRESS", "ACCESSTOKEN", script_id)
         else:
             print(G + f"\n[DETECTED] {decision}" + R)
     else:
