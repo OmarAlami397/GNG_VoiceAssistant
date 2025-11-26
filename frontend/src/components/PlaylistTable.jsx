@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from "react";
-//import { deleteGroupFromPi } from "src/backend/piApi.js";
 
 export default function PlaylistTable({ newCommand }) {
   const [commands, setCommands] = useState([]);
@@ -10,16 +9,22 @@ export default function PlaylistTable({ newCommand }) {
 
     const groups = {};
     data.forEach((rec) => {
-      if (!groups[rec.title]) groups[rec.title] = [];
-      groups[rec.title][rec.version - 1] = rec;
+      if (!groups[rec.title]) {
+        groups[rec.title] = {
+          recordings: [],
+          script_id: rec.script_id
+        };
+      }
+      groups[rec.title].recordings[rec.version - 1] = rec;
     });
 
-    setCommands(
-      Object.keys(groups).map((title) => ({
-        title,
-        recordings: groups[title],
-      }))
-    );
+    const commandList = Object.keys(groups).map((title) => ({
+      title,
+      recordings: groups[title].recordings,
+      script_id: groups[title].script_id
+    }));
+
+    setCommands(commandList);
   };
 
   useEffect(() => {
@@ -30,33 +35,50 @@ export default function PlaylistTable({ newCommand }) {
     if (newCommand) {
       setCommands((prev) => [
         ...prev,
-        { title: newCommand.title, recordings: newCommand.recordings },
+        { 
+          title: newCommand.title, 
+          recordings: newCommand.recordings,
+          script_id: newCommand.scriptId || "N/A" 
+        },
       ]);
     }
   }, [newCommand]);
 
   const playAudio = (rec) => {
     if (!rec) return;
-    
-    // Handle both response formats - file_data (old) and file_base64 (new)
-    let audioData;
+
+    let audioBlob;
+
     if (rec.file_base64) {
-      // New format - base64 string
-      audioData = rec.file_base64;
+      if (rec.file_base64.startsWith('data:')) {
+        const audio = new Audio(rec.file_base64);
+        audio.play();
+        return;
+      } else {
+        const binaryString = atob(rec.file_base64);
+        const bytes = new Uint8Array(binaryString.length);
+        for (let i = 0; i < binaryString.length; i++) {
+          bytes[i] = binaryString.charCodeAt(i);
+        }
+        audioBlob = new Blob([bytes], { type: "audio/webm" });
+      }
     } else if (rec.file_data && rec.file_data.data) {
-      // Old format - buffer data
-      audioData = rec.file_data.data;
+      const buffer = new Uint8Array(rec.file_data.data);
+      audioBlob = new Blob([buffer], { type: "audio/webm" });
     } else {
-      console.error("No audio data found");
       return;
     }
 
-    const array = new Uint8Array(
-      atob(audioData).split("").map((c) => c.charCodeAt(0))
-    );
-    const blob = new Blob([array], { type: "audio/webm" });
-    const url = URL.createObjectURL(blob);
-    new Audio(url).play();
+    if (audioBlob && audioBlob.size > 0) {
+      const url = URL.createObjectURL(audioBlob);
+      const audio = new Audio(url);
+      
+      audio.onload = () => {
+        URL.revokeObjectURL(url);
+      };
+      
+      audio.play();
+    }
   };
 
   const deleteCommand = async (title) => {
@@ -64,9 +86,6 @@ export default function PlaylistTable({ newCommand }) {
     await fetch(`http://localhost:3001/recordings/title/${title}`, {
       method: "DELETE",
     });
-
-    //delete from raspberry pi
-    //await deleteGroupFromPi(title);
   };
 
   return (
@@ -85,10 +104,16 @@ export default function PlaylistTable({ newCommand }) {
           {commands.map((cmd, index) => (
             <tr key={cmd.title + index}>
               <td>{index + 1}</td>
-              <td>{cmd.title}</td>
-              <td>{cmd.recordings[0]?.script_id || "N/A"}</td>
+              <td className="title-cell">{cmd.title}</td>
+              <td className="title-cell">{cmd.script_id || "N/A"}</td>
               <td>
-                <button onClick={() => playAudio(cmd.recordings[0])}>▶️ Play</button>
+                <button onClick={() => {
+                  if (cmd.recordings && cmd.recordings[0]) {
+                    playAudio(cmd.recordings[0]);
+                  }
+                }}>
+                  ▶️ Play
+                </button>
               </td>
               <td>
                 <button onClick={() => deleteCommand(cmd.title)}>🗑 Delete</button>
