@@ -1,25 +1,19 @@
 import React, { useState, useEffect } from "react";
-//import { deleteGroupFromPi } from "src/backend/piApi.js";
+import { deleteGroupFromPi } from "../backend/piApi.js";
 
-export default function PlaylistTable({ newCommand }) {
+export default function PlaylistTable({ newCommand, onCommandSelect }) {
   const [commands, setCommands] = useState([]);
 
   const load = async () => {
-    const res = await fetch("http://localhost:3001/recordings");
+    // FIXED: Use Pi API instead of localhost:3001
+    const res = await fetch("http://GNG2101-VoiceBridge.local:8080/list_labels?user=default_user");
     const data = await res.json();
 
-    const groups = {};
-    data.forEach((rec) => {
-      if (!groups[rec.title]) groups[rec.title] = [];
-      groups[rec.title][rec.version - 1] = rec;
-    });
-
-    setCommands(
-      Object.keys(groups).map((title) => ({
-        title,
-        recordings: groups[title],
-      }))
-    );
+    const commandList = data.labels.map(label => ({
+      title: label,
+      recordings: []
+    }));
+    setCommands(commandList);
   };
 
   useEffect(() => {
@@ -35,38 +29,27 @@ export default function PlaylistTable({ newCommand }) {
     }
   }, [newCommand]);
 
-  const playAudio = (rec) => {
-    if (!rec) return;
-    
-    // Handle both response formats - file_data (old) and file_base64 (new)
-    let audioData;
-    if (rec.file_base64) {
-      // New format - base64 string
-      audioData = rec.file_base64;
-    } else if (rec.file_data && rec.file_data.data) {
-      // Old format - buffer data
-      audioData = rec.file_data.data;
-    } else {
-      console.error("No audio data found");
-      return;
+  const playAudio = async (title) => {
+    try {
+      // FIXED: Fetch recordings from Pi API
+      const response = await fetch(`http://GNG2101-VoiceBridge.local:8080/get_group_recordings?user=default_user&group_name=${encodeURIComponent(title)}`);
+      const data = await response.json();
+      if (data.recordings && data.recordings.length > 0) {
+        const recording = data.recordings[0];
+        if (recording.file_base64) {
+          const audio = new Audio(`data:audio/wav;base64,${recording.file_base64}`);
+          audio.play();
+        }
+      }
+    } catch (error) {
+      console.error("Error playing audio:", error);
     }
-
-    const array = new Uint8Array(
-      atob(audioData).split("").map((c) => c.charCodeAt(0))
-    );
-    const blob = new Blob([array], { type: "audio/webm" });
-    const url = URL.createObjectURL(blob);
-    new Audio(url).play();
   };
 
+  // FIXED: Use Pi API delete function
   const deleteCommand = async (title) => {
     setCommands((prev) => prev.filter((cmd) => cmd.title !== title));
-    await fetch(`http://localhost:3001/recordings/title/${title}`, {
-      method: "DELETE",
-    });
-
-    //delete from raspberry pi
-    //await deleteGroupFromPi(title);
+    await deleteGroupFromPi(title);
   };
 
   return (
@@ -88,7 +71,7 @@ export default function PlaylistTable({ newCommand }) {
               <td>{cmd.title}</td>
               <td>{cmd.recordings[0]?.script_id || "N/A"}</td>
               <td>
-                <button onClick={() => playAudio(cmd.recordings[0])}>▶️ Play</button>
+                <button onClick={() => playAudio(cmd.title)}>▶️ Play</button>
               </td>
               <td>
                 <button onClick={() => deleteCommand(cmd.title)}>🗑 Delete</button>

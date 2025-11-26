@@ -112,25 +112,19 @@ export default function AddPage({ inputValue, setInputValue, onComplete }) {
 
   //save all recordings to database
   const saveAllRecordings = async () => {
-    const completedCommand = {
-      title,
-      recordings,
-    };
-
-    await fetch("http://localhost:3001/recordings/batch", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(completedCommand),
-    });
-
-    //upload to pi
-    await uploadGroupToPi(title, recordings);
-
-    if (onComplete) onComplete(completedCommand);
-
-    setRecordings([]);
-    setScriptId(""); // Reset Script ID when recordings are done
+  const completedCommand = {
+    title,
+    recordings,
   };
+
+  // FIXED: Pass the user's scriptId to upload function
+  await uploadGroupToPi(title, recordings, scriptId);
+
+  if (onComplete) onComplete(completedCommand);
+
+  setRecordings([]);
+  setScriptId(""); // Reset Script ID when recordings are done
+};
 
   //auto-save when 10 recordings reached
   useEffect(() => {

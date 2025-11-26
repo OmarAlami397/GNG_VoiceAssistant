@@ -300,6 +300,8 @@ def delete_group():
         # Update profile index: remove examples with this label
         prof = sm.load_profile(user)
         prof["examples"] = [ex for ex in prof.get("examples", []) if ex.get("label") != label]
+        if "scripts" in prof and label in prof["scripts"]:
+            del prof["scripts"][label]
         sm.save_profile(user, prof)
 
         # Retrain model (same as upload)
