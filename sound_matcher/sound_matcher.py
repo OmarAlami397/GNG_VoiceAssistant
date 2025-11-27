@@ -305,19 +305,11 @@ def enroll_from_dir(user: str, label: str, script_id: str, dir_path: Path) -> No
         print(Y + "No WAV files found in that folder." + R)
         return
 
-    stash_dir = AUDIO_DIR / user / label
-    stash_dir.mkdir(parents=True, exist_ok=True)
-
     print(C + f"Adding {len(wavs)} files for label '{label}'…" + R)
 
-    # FIXED: Just add references to existing files, don't copy them
     for w in wavs:
-        y = read_wav(w)
-        val = rms(y)
-        print(f"  {w.name}: rms={val:.5f}")
-        fname = stash_dir / f"{len(list(stash_dir.glob('*.wav'))) + 1:03d}.wav"
-        sf.write(str(fname), preprocess_audio(y), SAMPLE_RATE)
-        examples.append({"path": str(fname), "label": label})
+        examples.append({"path": str(w), "label": label})
+        print(f"  Added: {w.name}")
 
     prof["examples"] = examples
     prof["scripts"] = scripts
