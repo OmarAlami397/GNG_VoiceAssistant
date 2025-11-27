@@ -109,7 +109,7 @@ def upload_profile_group():
         hass_token = request.form.get("hass_token", "")
         if hass_ip and hass_token:
             sm.set_hass_credentials(hass_ip, hass_token)
-            group_name_raw = request.form.get("group_name", "").strip() or "default"
+        group_name_raw = request.form.get("group_name", "").strip() or "default"
         label = sm.normalize_text(group_name_raw)
 
         metadata_raw = request.form.get("metadata", "")
