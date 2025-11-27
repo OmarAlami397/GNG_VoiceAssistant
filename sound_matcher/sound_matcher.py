@@ -355,8 +355,8 @@ def predict_from_file(user: str, wav_path: Path) -> None:
 
 def listen_once(user: str) -> None:
     """
-    Push-to-talk: wait for ENTER, record one window, classify once,
-    then return to the main menu. Also shows script_id.
+    Auto-listen mode: immediately records one window, classifies once,
+    then returns to the main menu. Also shows script_id.
     """
     user = normalize_text(user)
     bundle = load_model(user)
@@ -367,19 +367,17 @@ def listen_once(user: str) -> None:
     prof = load_profile(user)
     scripts = prof["scripts"]
 
-    print(C + "\nPush-to-talk mode\n" + R)
-    print("When you're ready:")
-    print("  - Press ENTER to start listening")
-    print(f"  - Speak your command (recording lasts ~{REC_LEN_SEC:.1f} seconds)")
-    print("  - Then wait for the result\n")
+    print(C + "\nAuto-listen mode\n" + R)
+    print(f"Recording now (~{REC_LEN_SEC:.1f} seconds)...\n")
 
-    input("Press ENTER to record...")
     sd.default.samplerate = SAMPLE_RATE
     sd.default.channels = CHANNELS
 
+    # **Start recording immediately**
     block = sd.rec(int(REC_LEN_SEC * SAMPLE_RATE), dtype="float32")
     sd.wait()
     y = block.squeeze()
+
     val = rms(y)
     print(f"rms={val:.5f}")
 
@@ -409,6 +407,7 @@ def listen_once(user: str) -> None:
             print(G + f"\n[DETECTED] {decision}" + R)
     else:
         print(Y + "\nNo confident command recognized (UNKNOWN)." + R)
+
 
 
 def list_labels(user: str) -> None:
