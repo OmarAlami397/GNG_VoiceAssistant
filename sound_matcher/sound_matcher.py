@@ -1,6 +1,6 @@
 import json
 from pathlib import Path
-from typing import Dict, List, Optional
+from typing import  List
 
 import numpy as np
 import sounddevice as sd
@@ -9,6 +9,7 @@ import librosa
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.preprocessing import LabelEncoder
 import joblib
+import home_assistant_interfacing as ha
 
 # ===== Terminal colours =====
 B = "\033[1m"
@@ -152,22 +153,7 @@ def extract_features_from_path(path: Path) -> np.ndarray:
     return extract_features_from_audio(y)
 
 
-HASS_IP = ""
-HASS_TOKEN = ""
 
-def set_hass_credentials(ip: str, token: str) -> None:
-    """Set Home Assistant credentials for use in voice commands"""
-    global HASS_IP, HASS_TOKEN
-    HASS_IP = ip
-    HASS_TOKEN = token
-
-def get_hass_ip() -> str:
-    """Get Home Assistant IP"""
-    return HASS_IP
-
-def get_hass_token() -> str:
-    """Get Home Assistant token"""
-    return HASS_TOKEN
 
 # ===== Model training & prediction =====
 def train_model(user: str) -> None:
@@ -319,13 +305,19 @@ def enroll_from_dir(user: str, label: str, script_id: str, dir_path: Path) -> No
         print(Y + "No WAV files found in that folder." + R)
         return
 
+    stash_dir = AUDIO_DIR / user / label
+    stash_dir.mkdir(parents=True, exist_ok=True)
+
     print(C + f"Adding {len(wavs)} files for label '{label}'…" + R)
 
     # FIXED: Just add references to existing files, don't copy them
     for w in wavs:
-        # Use the existing file path, don't create a new one
-        examples.append({"path": str(w), "label": label})
-        print(f"  Added: {w.name}")
+        y = read_wav(w)
+        val = rms(y)
+        print(f"  {w.name}: rms={val:.5f}")
+        fname = stash_dir / f"{len(list(stash_dir.glob('*.wav'))) + 1:03d}.wav"
+        sf.write(str(fname), preprocess_audio(y), SAMPLE_RATE)
+        examples.append({"path": str(fname), "label": label})
 
     prof["examples"] = examples
     prof["scripts"] = scripts
@@ -420,6 +412,7 @@ def listen_once(user: str) -> None:
         script_id = scripts.get(decision, "")
         if script_id:
             print(G + f"\n[DETECTED] {decision} (script_id={script_id})" + R)
+            ha.TriggerScript(script_id)
         else:
             print(G + f"\n[DETECTED] {decision}" + R)
     else:

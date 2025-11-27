@@ -32,6 +32,7 @@ import time
 from flask_cors import CORS
 
 import sound_matcher as sm
+import home_assistant_interfacing as ha
 
 app = Flask(__name__)
 CORS(app, origins=["http://localhost:5173", "http://127.0.0.1:5173"], supports_credentials=True)
@@ -108,7 +109,7 @@ def upload_profile_group():
         hass_ip = request.form.get("hass_ip", "")
         hass_token = request.form.get("hass_token", "")
         if hass_ip and hass_token:
-            sm.set_hass_credentials(hass_ip, hass_token)
+            ha.set_hass_credentials(hass_ip, hass_token)
         group_name_raw = request.form.get("group_name", "").strip() or "default"
         label = sm.normalize_text(group_name_raw)
 
