@@ -151,6 +151,23 @@ def extract_features_from_path(path: Path) -> np.ndarray:
     y = read_wav(path)
     return extract_features_from_audio(y)
 
+# Add at the top with other configuration
+HASS_IP = ""
+HASS_TOKEN = ""
+
+def set_hass_credentials(ip: str, token: str) -> None:
+    """Set Home Assistant credentials for use in voice commands"""
+    global HASS_IP, HASS_TOKEN
+    HASS_IP = ip
+    HASS_TOKEN = token
+
+def get_hass_ip() -> str:
+    """Get Home Assistant IP"""
+    return HASS_IP
+
+def get_hass_token() -> str:
+    """Get Home Assistant token"""
+    return HASS_TOKEN
 
 # ===== Model training & prediction =====
 def train_model(user: str) -> None:

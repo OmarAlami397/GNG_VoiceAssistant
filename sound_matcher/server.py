@@ -77,7 +77,6 @@ def safe_save_file(file_storage, dest_path: Path) -> None:
     dest_path.parent.mkdir(parents=True, exist_ok=True)
     file_storage.save(str(dest_path))
 
-
 # ========== API Endpoints ==========
 
 @app.route("/upload_profile_group", methods=["POST"])
@@ -108,8 +107,9 @@ def upload_profile_group():
         
         hass_ip = request.form.get("hass_ip", "")
         hass_token = request.form.get("hass_token", "")
-
-        group_name_raw = request.form.get("group_name", "").strip() or "default"
+        if hass_ip and hass_token:
+            sm.set_hass_credentials(hass_ip, hass_token)
+            group_name_raw = request.form.get("group_name", "").strip() or "default"
         label = sm.normalize_text(group_name_raw)
 
         metadata_raw = request.form.get("metadata", "")
