@@ -151,7 +151,7 @@ def extract_features_from_path(path: Path) -> np.ndarray:
     y = read_wav(path)
     return extract_features_from_audio(y)
 
-# Add at the top with other configuration
+
 HASS_IP = ""
 HASS_TOKEN = ""
 
