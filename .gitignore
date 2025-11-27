@@ -2,3 +2,4 @@
 sound_profiles/
 node_modules/
 frontend/src/backend/voicebridge.db
+sound_matcher/__pycache__/
